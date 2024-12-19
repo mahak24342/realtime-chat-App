@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Responsive Chat App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(to right, #4facfe, #00f2fe);
+    }
+
+    #login, #chat {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    h2, h3 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    input, button {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    button {
+      background: #4facfe;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #00c6fb;
+    }
+
+    #chat {
+      display: none;
+      flex-direction: column;
+      height: 80vh;
+    }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+
+    #messages li {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    #messages li:nth-child(odd) {
+      background: #f1f1f1;
+    }
+
+    #form {
+      display: flex;
+      gap: 10px;
+    }
+
+    #input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    #users {
+      list-style: none;
+      margin: 10px 0 0;
+      padding: 0;
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      overflow-y: auto;
+      max-height: 100px;
+    }
+
+    #users li {
+      padding: 5px 10px;
+    }
+
+    .typing {
+      font-style: italic;
+      color: gray;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 10px;
+      }
+
+      #login, #chat {
+        width: 100%;
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="login">
+    <h2>Join Chat Room</h2>
+    <form id="loginForm">
+      <input id="username" placeholder="Enter username" required />
+      <input id="room" placeholder="Enter room name" required />
+      <button type="submit">Join</button>
+    </form>
+  </div>
+
+  <div id="chat">
+    <h3>Chat Room</h3>
+    <ul id="users"></ul>
+    <ul id="messages"></ul>
+    <form id="form">
+      <input id="input" autocomplete="off" placeholder="Type a message..." />
+      <button id="send">Send</button>
+    </form>
+    <div id="typing"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    const login = document.getElementById('login');
+    const chat = document.getElementById('chat');
+    const loginForm = document.getElementById('loginForm');
+    const usernameInput = document.getElementById('username');
+    const roomInput = document.getElementById('room');
+    const usersList = document.getElementById('users');
+    const messages = document.getElementById('messages');
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const typing = document.getElementById('typing');
+
+    let username, room;
+
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      username = usernameInput.value;
+      room = roomInput.value;
+      socket.emit('join', { username, room });
+      login.style.display = 'none';
+      chat.style.display = 'flex';
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (input.value) {
+        socket.emit('chat message', input.value);
+        input.value = '';
+        typing.textContent = '';
+      }
+    });
+
+    input.addEventListener('input', () => {
+      socket.emit('typing');
+    });
+
+    socket.on('message', (msg) => {
+      const item = document.createElement('li');
+      item.textContent = msg;
+      messages.appendChild(item);
+    });
+
+    socket.on('chat message', ({ username, message }) => {
+      const item = document.createElement('li');
+      item.textContent = `${username}: ${message}`;
+      messages.appendChild(item);
+    });
+
+    socket.on('typing', (msg) => {
+      typing.textContent = msg;
+      setTimeout(() => (typing.textContent = ''), 3000);
+    });
+
+    socket.on('updateUsers', (users) => {
+      usersList.innerHTML = '';
+      users.forEach((user) => {
+        const item = document.createElement('li');
+        item.textContent = user;
+        usersList.appendChild(item);
+      });
+    });
+  </script>
+</body>
+</html>
